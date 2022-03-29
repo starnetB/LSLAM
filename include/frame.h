@@ -25,14 +25,14 @@ public:
     unsigned long keyframe_id_=0;  //id of key frame
     bool is_keyframe_=false;       //是否为关键帧
     double time_stamp_;            //时间戳，暂时不使用
-    SE3 pose_;                     //Tcw 形式Pose
+    SE3 pose_;                     //Tcw 形式Pose 
     std::mutex pose_mutex_;        //Pose数据锁
     cv::Mat left_img_,right_img_;  //stero images
 
     //extracted features in left img
-    std::vector<std::shared_ptr<Feature>> features_left;
+    std::vector<std::shared_ptr<Feature>> features_left_;
     // corresponding features in right image, set to nullptr if no corresponding
-    std::vector<std::shared_ptr<Feature>> feature_right;
+    std::vector<std::shared_ptr<Feature>> features_right_;
 
     Frame(){}
 

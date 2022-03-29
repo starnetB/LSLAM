@@ -95,7 +95,7 @@ void Map::RemoveOldKeyframe() {
 
     CleanMap();
 }
-
+//移除那些
 void Map::CleanMap() {
     int cnt_landmark_removed = 0;
     for (auto iter = active_landmarks_.begin();

@@ -28,7 +28,7 @@ public:
     void InsertMapPoint(MapPoint::Ptr map_point);
 
     ///所有地图点
-    LandmarksType GerAllMapPoints(){
+    LandmarksType GetAllMapPoints(){
         std::unique_lock<std::mutex> lck(data_mutex_);
         return landmarks_;
     }
@@ -64,7 +64,7 @@ private:
     KeyframesType keyframes_;                   // all key-frames
     KeyframesType activate_keyframes_;            // active all key-frames
 
-    Frame::Ptr current_frame=nullptr;
+    Frame::Ptr current_frame_=nullptr;
 
     //settings 
     int num_activate_keyframes_=7;            //激活的关键帧

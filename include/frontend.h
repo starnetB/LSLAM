@@ -112,7 +112,7 @@ private:
     FrontendStatus status_=FrontendStatus::INITING;
 
     Frame::Ptr current_frame_=nullptr;   //当前帧
-    Frame::Ptr last_frame=nullptr;       //上一帧
+    Frame::Ptr last_frame_=nullptr;       //上一帧
     Camera::Ptr camera_left_=nullptr;     //右侧相机
     Camera::Ptr camera_right_=nullptr;    //左侧相机
 

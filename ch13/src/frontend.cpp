@@ -254,9 +254,11 @@ int Frontend::TrackLastFrame() {
         cv::OPTFLOW_USE_INITIAL_FLOW);
 
     int num_good_pts = 0;
-
+    // 使用识别出来的feature 2d 填充current_frame_->features
     for (size_t i = 0; i < status.size(); ++i) {
         if (status[i]) {
+            // 这里的7是特征点的尺度，特征点的范围，应该和上面的cv::Size()有关
+            // 该关键点邻域直径大小； 
             cv::KeyPoint kp(kps_current[i], 7);
             Feature::Ptr feature(new Feature(current_frame_, kp));
             feature->map_point_ = last_frame_->features_left_[i]->map_point_;
