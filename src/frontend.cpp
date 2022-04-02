@@ -5,7 +5,7 @@
 #include <config.h>
 #include <feature.h>
 #include <frontend.h>
-//#include <g2o_types.h>
+#include <g2o_types.h>
 #include <map.h>
 //#include <viewer.h>
 
@@ -41,11 +41,12 @@ bool Frontend::AddFrame(lslam::Frame::Ptr frame){
 bool Frontend::Track(){
     if(last_frame_){
         // relative_motion_.   point current->last
-        // last_frame->pose    c->w
-        // relative_motion_.   current->w
+        // last_frame->pose    last->world
+        // result   current->w
+        // 
         current_frame_->SetPose(relative_motion_*last_frame_->Pose());
     }
-    int num_track_last=TrackLastFrame();  //使用上一帧图，来更新这一帧图的 features_left Vector
+    int num_track_last=TrackLastFrame();  //使用上一帧图，来更新这一帧图的 features_left Vector,也就是找到对应的特征点
 
 //    tracking_inliers_=Es
 }
@@ -61,7 +62,9 @@ int Frontend::TrackLastFrame(){
             //use project point
             // 如果有找到对应的地图点，那就使用重投影的方法找到像素点
             auto mp=kp->map_point_.lock();
+            // * 下面有个地方出现了歧义
             auto px=camera_left_->world2pixel(mp->pos_,current_frame_->Pose());
+            //这里只是初步更新，结果还是看光流
             kps_last.push_back(kp->position_.pt);
             kps_current.push_back(cv::Point2f(px[0],px[1]));
         }else{
@@ -111,7 +114,41 @@ int Frontend::TrackLastFrame(){
 int Frontend::EstimateCurrentPose(){
     //setup g2o
     typedef g2o::BlockSolver_6_3 BlockSolverType;
+    typedef g2o::LinearSolverDense<BlockSolverType::PoseMatrixType> LinearSolverType;
+    auto solver=new g2o::OptimizationAlgorithmLevenberg(
+        g2o::make_unique<BlockSolverType>(
+            g2o::make_unique<LinearSolverType>()));
+    g2o::SparseOptimizer optimzier;
+    optimzier.setAlgorithm(solver);
 
+    //vertex
+    VertexPose *vertex_pose=new VertexPose();  //camera_vertex_pose 左图到世界坐标系
+    vertex_pose->setId(0);
+    vertex_pose->setEstimate(current_frame_->Pose());
+    optimzier.addVertex(vertex_pose);
+
+    //K
+    Mat33 K=camera_left_->K();
+
+    //edges
+    int index=1;
+    std::vector<EdgeProjectionPoseOnly *> edges;
+    std::vector<Feature::Ptr> features;
+
+    for(size_t i=0;i<current_frame_->features_left_.size();++i){
+        auto mp=current_frame_->features_left_[i]->map_point_.lock();
+        if(mp){
+            features.push_back(current_frame_->features_left_[i]);
+            EdgeProjectionPoseOnly *edge=new EdgeProjectionPoseOnly(mp->pos_,K);
+            edge->setId(index);
+            edge->setVertex(0,vertex_pose);
+            // 地图点的pos_，直接带入其中，也就是左图直接指向世界坐标，current_frame就是这样，那么这里就和上面出现的歧义，后面要好好对应一下
+            edge->setMeasurement(
+                toVec
+            )
+
+        }
+    }
 
 }
 }

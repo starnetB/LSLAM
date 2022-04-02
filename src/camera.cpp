@@ -4,6 +4,8 @@ namespace lslam{
 
 Camera::Camera(){}
 
+//这里呢有点注意点，函数名中的camera是指single camera,应该是leftcamera
+// T_C_W中的C代表的camera 是指stereo camera
 Vec3 Camera::world2camera(const Vec3 &p_w,const SE3 &T_c_w){
     // pose_* H :from stereo camera to single camera   single->stereo
     // T_c_w* H :from world to stereo camera  camera->world

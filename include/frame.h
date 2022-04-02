@@ -25,6 +25,11 @@ public:
     unsigned long keyframe_id_=0;  //id of key frame
     bool is_keyframe_=false;       //是否为关键帧
     double time_stamp_;            //时间戳，暂时不使用
+    //每一帧的Tcw严格来讲是来自于左图之间的相对坐标，
+    //但是有camera本身做了修正
+    //所以左图与stereo坐标系的Tcw是一致的
+    //但严格来将并不是同一个坐标系，因此每个的camera与stereo的三维点不一致的
+    //因此每次运算前必须world2camera，然后在利用3d-2d误差计算相对关系
     SE3 pose_;                     //Tcw 形式Pose 
     std::mutex pose_mutex_;        //Pose数据锁
     cv::Mat left_img_,right_img_;  //stero images

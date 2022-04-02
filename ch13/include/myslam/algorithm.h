@@ -29,12 +29,6 @@ inline bool triangulation(const std::vector<SE3> &poses,
     }
     auto svd = A.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV);
     pt_world = (svd.matrixV().col(3) / svd.matrixV()(3, 3)).head<3>();
-
-    if (svd.singularValues()[3] / svd.singularValues()[2] < 1e-2) {
-        // 解质量不好，放弃
-        return true;
-    }
-    return false;
 }
 
 // converters

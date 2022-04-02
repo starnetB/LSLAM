@@ -153,6 +153,7 @@ int Frontend::EstimateCurrentPose() {
     // vertex
     VertexPose *vertex_pose = new VertexPose();  // camera vertex_pose
     vertex_pose->setId(0);
+    // current_frame_->Pose() TCW实际上应该是左图对应于世界坐标系下的点
     vertex_pose->setEstimate(current_frame_->Pose());
     optimizer.addVertex(vertex_pose);
 

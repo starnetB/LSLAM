@@ -89,7 +89,7 @@ public:
 
     virtual bool read(std::istream &in) override {return true;}
 
-    virtual bool write(std::ostream *out) const override {return true;}
+    virtual bool write(std::ostream &out) const  override {return true;}
 private:
     Vec3 _pos3d;
     Mat33 _K;
@@ -98,7 +98,58 @@ private:
 /// 带有地图和位姿的二元边
 class EdgeProjection:public g2o::BaseBinaryEdge<2,Vec2,VertexPose,VertexXYZ>{
 public:
-    
-}
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    ///构造函数传入相机内外参数
+    //这里的外参数到底是什么我有点不明白 ??后面在看看
+    //在前端的TCW计算中，frame中的Pose是左图想对于世界坐标下的位置
+    //stereo与stereo之间的相对Pose，和左图与左图之间的坐标是一样的
+
+    //但是在后端运算中，每次运算优化world下的地图点，与TCW(是Stereo直接指向world的)
+    //但是camera真实的对象是左图，因此需要把single camera to stereo  camera计算出来
+    //这个_cam_ext就是这个位姿
+    EdgeProjection(const Mat33 &K,const SE3 &cam_ext):_K(K){
+        _cam_ext=cam_ext;
+    }
+
+    virtual void computeError() override{
+        const VertexPose *v0=static_cast<VertexPose *>(_vertices[0]);
+        const VertexXYZ *v1=static_cast<VertexXYZ *>(_vertices[1]);
+        SE3 T=v0->estimate();
+        Vec3 pos_pixel=_K*(_cam_ext*(T*v1->estimate()));
+        pos_pixel/=pos_pixel[2];
+        _error=_measurement-pos_pixel.head<2>();
+    }
+
+    virtual void linearizeOplus() override{
+        const VertexPose *v0=static_cast<VertexPose *>(_vertices[0]);
+        const VertexXYZ *v1=static_cast<VertexXYZ *>(_vertices[1]);
+        SE3 T=v0->estimate();
+        Vec3 pw=v1->estimate();
+        Vec3 pos_cam=_cam_ext*T*pw;
+        double fx=_K(0,0);
+        double fy=_K(1,1);
+        double X=pos_cam[0];
+        double Y=pos_cam[1];
+        double Z=pos_cam[2];    
+        double Zinv = 1.0 / (Z + 1e-18);
+        double Zinv2 = Zinv * Zinv;
+        //位姿的优化针对v0
+        _jacobianOplusXi << -fx * Zinv, 0, fx * X * Zinv2, fx * X * Y * Zinv2,
+            -fx - fx * X * X * Zinv2, fx * Y * Zinv, 0, -fy * Zinv,
+            fy * Y * Zinv2, fy + fy * Y * Y * Zinv2, -fy * X * Y * Zinv2,
+            -fy * X * Zinv;
+        //地图点的优化针对v1
+        _jacobianOplusXj=_jacobianOplusXi.block<2,3>(0,0)*
+                            _cam_ext.rotationMatrix()*T.rotationMatrix();
+        
+    }   
+
+    virtual bool read(std::istream &in) override {return true;}
+
+    virtual bool write(std::ostream &out) const override  {return true;}
+private:
+    Mat33 _K;
+    SE3 _cam_ext;
+};
 }
 #endif
