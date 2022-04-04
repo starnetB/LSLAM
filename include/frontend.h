@@ -126,10 +126,10 @@ private:
 
     //params
     int num_features_=200;
-    int num_features_init_ =100;
-    int num_features_tracking_=50;
-    int num_features_tracking_bad_=20;
-    int num_features_needed_for_keyframe_=80;
+    int num_features_init_ =100;  //初始化的时候必须达到的双双对应特征数量，否则初始化失败
+    int num_features_tracking_=50;  //如果在Track() 数量不比50大，那么就定义为tracking Good
+    int num_features_tracking_bad_=20;  //如果track() 数量比20打，那么就定为tracking Bad 否则就是track lost
+    int num_features_needed_for_keyframe_=80;  //如果特征数量，比80大，那么无需将当前Current_frame insert key_frame
 
 
     //utilities

@@ -25,7 +25,7 @@ public:
         pose_inv_ = pose_.inverse();
     }
 
-    SE3 pos() const {return pose_;}
+    SE3 pose() const {return pose_;}
 
     //return intrinsic matrix
     Mat33 K() const {

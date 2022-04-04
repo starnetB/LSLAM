@@ -28,7 +28,7 @@ public:
     cv::KeyPoint position_;               // 2D提取位置
     std::weak_ptr<MapPoint> map_point_;   //关联地图点
 
-    bool is_outlier=false;               //是否是异常点
+    bool is_outlier_=false;               //是否是异常点
     bool is_on_left_image_=true;         //标识是否在左图,false为右图
 
 public:

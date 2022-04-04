@@ -17,7 +17,7 @@ void Map::InsertKeyFrame(Frame::Ptr frame){
     }
 
     if(activate_keyframes_.size()> num_activate_keyframes_){
-        //将旧的关键帧置为不活跃状态
+        //将激活的旧的关键帧删除
         RemoveOldKeyframe();
     }
 }
@@ -65,13 +65,13 @@ void Map::RemoveOldKeyframe(){
     LOG(INFO) << "remove keyframe " << frame_to_remove->keyframe_id_;
     // remove keyframe and landmark observation
     activate_keyframes_.erase(frame_to_remove->keyframe_id_);
-    for(auto feat:frame_to_remove->features_left){
+    for(auto feat:frame_to_remove->features_left_){
         auto mp=feat->map_point_.lock();
         if(mp){
             mp->RemoveObservation(feat);
         }
     }
-    for(auto feat:frame_to_remove->features_right){
+    for(auto feat:frame_to_remove->features_right_){
         if(feat==nullptr) continue;
         auto mp=feat->map_point_.lock();
         if(mp){
@@ -82,6 +82,7 @@ void Map::RemoveOldKeyframe(){
     CleanMap();
 }
 
+//清楚 那些没有被观察到的点
 void Map::CleanMap(){
     int cnt_landmark_removed=0;
     for(auto iter=active_landmarks_.begin();
