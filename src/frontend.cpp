@@ -44,7 +44,7 @@ bool Frontend::Track(){
         // relative_motion_.   point current->last
         // last_frame->pose    last->world
         // result   current->w
-        // 
+        // 下面的歧义在这里解决啦，每次都是用相对坐标更新就可以啦
         current_frame_->SetPose(relative_motion_*last_frame_->Pose());
     }
     int num_track_last=TrackLastFrame();  //使用上一帧图，来更新这一帧图的 features_left Vector,也就是找到对应的特征点
@@ -347,7 +347,7 @@ int Frontend::DetectFeatures(){
         cnt_detected++;
     }
     LOG(INFO) << "Detect " << cnt_detected << " new features";
-     return cnt_detected;
+    return cnt_detected;
 }
 
 int Frontend::FindFeaturesInRight(){

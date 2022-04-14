@@ -24,7 +24,7 @@ void Backend::UpdateMap() {
 void Backend::Stop() {
     backend_running_.store(false);
     map_update_.notify_one();
-    backend_thread_.join();
+    backend_thread_.join();  //其实就是join()方法将挂起调用线程的执行,直到被调用的对象完成它的执行。”
 }
 
 void Backend::BackendLoop() {
@@ -141,6 +141,7 @@ void Backend::Optimize(Map::KeyframesType &keyframes,
                 cnt_inlier++;
             }
         }
+        //如果比例不够大，就增加阈值，提高内点数量
         double inlier_ratio = cnt_inlier / double(cnt_inlier + cnt_outlier);
         if (inlier_ratio > 0.5) {
             break;
