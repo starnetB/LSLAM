@@ -91,9 +91,9 @@ cv::Mat Viewer::PlotFrameImage() {
 }
 
 void Viewer::FollowCurrentFrame(pangolin::OpenGlRenderState& vis_camera) {
-    SE3 Twc = current_frame_->Pose().inverse();
+    SE3 Twc = current_frame_->Pose().inverse();  //C->W inver W-c
     pangolin::OpenGlMatrix m(Twc.matrix());
-    vis_camera.Follow(m, true);
+    vis_camera.Follow(m, true);  //跟踪到当前相机
 }
 
 void Viewer::DrawFrame(Frame::Ptr frame, const float* color) {
@@ -107,9 +107,12 @@ void Viewer::DrawFrame(Frame::Ptr frame, const float* color) {
     const float width = 1080;
     const float height = 768;
 
+    // 把当前模型保存到视图矩阵，
+    // 以后之前定义的参数作为坐标元点
     glPushMatrix();
 
     Sophus::Matrix4f m = Twc.matrix().template cast<float>();
+    // 之前的位置，转换到当前的位置
     glMultMatrixf((GLfloat*)m.data());
 
     if (color == nullptr) {
@@ -118,6 +121,7 @@ void Viewer::DrawFrame(Frame::Ptr frame, const float* color) {
         glColor3f(color[0], color[1], color[2]);
 
     glLineWidth(line_width);
+    //画上一个类似与电视机打框框，你懂的吗？
     glBegin(GL_LINES);
     glVertex3f(0, 0, 0);
     glVertex3f(sz * (0 - cx) / fx, sz * (0 - cy) / fy, sz);
