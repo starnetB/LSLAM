@@ -1,15 +1,17 @@
 #include <opencv2/opencv.hpp>
 
 #include <algorithm.h>
-//#include <backend.h>
+#include <backend.h>
 #include <config.h>
 #include <feature.h>
 #include <frontend.h>
 #include <g2o_types.h>
 #include <map.h>
-//#include <viewer.h>
+#include <viewer.h>
 
 namespace lslam{
+
+
 Frontend::Frontend(){
     gftt_=cv::GFTTDetector::create(Config::Get<int>("num_features"),0.01,20);
     num_features_init_=Config::Get<int>("num_features_init");
@@ -40,6 +42,7 @@ bool Frontend::AddFrame(lslam::Frame::Ptr frame){
 }
 
 bool Frontend::Track(){
+    
     if(last_frame_){
         // relative_motion_.   point current->last
         // last_frame->pose    last->world
@@ -50,7 +53,9 @@ bool Frontend::Track(){
     int num_track_last=TrackLastFrame();  //使用上一帧图，来更新这一帧图的 features_left Vector,也就是找到对应的特征点
     //获取当前帧的位姿，current_pose->pose_,但是优化有的当前帧位置是左图指向世界坐标系 
     //返回内点的数量，将外点的mappint 为null
+    
     tracking_inliers_=EstimateCurrentPose();
+    
     if(tracking_inliers_>num_features_tracking_){
         //tracking good
         status_=FrontendStatus::TRACKING_GOOD;
@@ -63,13 +68,15 @@ bool Frontend::Track(){
     }
     InsertKeyframe();
     relative_motion_=current_frame_->Pose()*last_frame_->Pose().inverse();
-    //if(viewer_) viewer_->AddCurrentFrame(current_frame_);
+    if(viewer_) viewer_->AddCurrentFrame(current_frame_);
     return true;
 }
 
 bool Frontend::InsertKeyframe(){
+    
     if(tracking_inliers_>=num_features_needed_for_keyframe_){
         //still have enough features,don't insert keyframe
+        LOG(INFO)<<"setframe"<<std::endl;
         return false;
     }
     //current frame is a new keyframe
@@ -88,18 +95,21 @@ bool Frontend::InsertKeyframe(){
     //Triangulate map points
     TriangulateNewPoints();
     
-    //backend_->UpdateMap();
-    //if(viewer_) viewer_->UpdateMap();
+    //后端，对Map的关键帧以及mappoint进行一次更新
+    backend_->UpdateMap(); 
+    //在视图上更新一次地图点与current_frame
+    if(viewer_) viewer_->UpdateMap();
     return true;
 }
 int Frontend::TriangulateNewPoints(){
+    
     std::vector<SE3> poses{camera_left_->pose(),camera_right_->pose()};
     SE3 current_pose_Twc=current_frame_->Pose().inverse();
     int cnt_triangulated_pts=0;
     for(size_t i=0;i<current_frame_->features_left_.size();++i){
         // .expired判断指针是否过期，想对于lock() 一般不需要取出对象，更加节约时间
         if(current_frame_->features_left_[i]->map_point_.expired() && 
-           current_frame_->features_left_[i] !=nullptr){
+           current_frame_->features_right_[i] !=nullptr){
             //左图的特征点未关联地图点  
             std::vector<Vec3> points{
                 camera_left_->pixel2camera(
@@ -131,12 +141,14 @@ int Frontend::TriangulateNewPoints(){
 
 
 void Frontend::SetObservationsForKeyFrame(){
+    
     for(auto &feat:current_frame_->features_left_){
         auto mp=feat->map_point_.lock();
         if(mp) mp->AddObservation(feat);
     }
 }
 int Frontend::TrackLastFrame(){
+    
     // use LK flow to estimate points in the right image
     // 当前帧和上一帧的关键点
     std::vector<cv::Point2f> kps_last,kps_current;
@@ -198,6 +210,7 @@ int Frontend::TrackLastFrame(){
 //更新current_frame 的Pose_,
 //返回有效特征点的个数
 int Frontend::EstimateCurrentPose(){
+    
     //setup g2o
     typedef g2o::BlockSolver_6_3 BlockSolverType;
     typedef g2o::LinearSolverDense<BlockSolverType::PoseMatrixType> LinearSolverType;
@@ -206,7 +219,7 @@ int Frontend::EstimateCurrentPose(){
             g2o::make_unique<LinearSolverType>()));
     g2o::SparseOptimizer optimzier;
     optimzier.setAlgorithm(solver);
-
+    
     //vertex
     VertexPose *vertex_pose=new VertexPose();  //camera_vertex_pose 左图到世界坐标系
     vertex_pose->setId(0);
@@ -220,26 +233,27 @@ int Frontend::EstimateCurrentPose(){
     int index=1;
     std::vector<EdgeProjectionPoseOnly *> edges;
     std::vector<Feature::Ptr> features;
-
+    
+    LOG(INFO)<<"featurese_size ::  "<<current_frame_->features_left_.size();
     for(size_t i=0;i<current_frame_->features_left_.size();++i){
         auto mp=current_frame_->features_left_[i]->map_point_.lock();
         if(mp){
             features.push_back(current_frame_->features_left_[i]);
             EdgeProjectionPoseOnly *edge=new EdgeProjectionPoseOnly(mp->pos_,K);
+            
             edge->setId(index);
             edge->setVertex(0,vertex_pose);
             // 地图点的pos_，直接带入其中，也就是左图直接指向世界坐标，current_frame就是这样，那么这里就和上面出现的歧义，后面要好好对应一下
-            // 结合G2o_type.h,这段代码很可能是错误的，但由于camera-pose本来就小，所以错误很不明显
             edge->setMeasurement(
                 toVec2(current_frame_->features_left_[i]->position_.pt));
-            edge->setInformation(Eigen::Matrix3d::Identity());
+            edge->setInformation(Eigen::Matrix2d::Identity());
             edge->setRobustKernel(new g2o::RobustKernelHuber);
             edges.push_back(edge);
             optimzier.addEdge(edge);
             index++;
         }
     }
-
+    /*e^T Q^-1 e*/ //信息举证表示我们对不同的误差重视程度不一样
     //estimate the Pose the determine the outliers
     //位姿是否应该是排除点
     const double chi2_th=5.991;
@@ -274,11 +288,11 @@ int Frontend::EstimateCurrentPose(){
 
             if(iteration==2){
                 //迭代两次后我们不在需要鲁棒核了，
+                //因为距离住足够接近了
                 e->setRobustKernel(nullptr);
             }
         }
     }
-
     LOG(INFO)<<"outlier/Inlier in pose estimating:"<<cnt_outlier<<"/"
              <<features.size()-cnt_outlier;
     
@@ -295,7 +309,6 @@ int Frontend::EstimateCurrentPose(){
             feat->is_outlier_=false;  //在优化的时候我们可能不放在里面，但优化完后还是会放回里面的
         }
     }
-
     return features.size()-cnt_outlier;
 }
 
@@ -314,11 +327,11 @@ bool Frontend::StereoInit(){
         //实现状态切换
         
         status_=FrontendStatus::TRACKING_GOOD;
-        /*
+        
         if(viewer_){
             viewer_->AddCurrentFrame(current_frame_);
             viewer_->UpdateMap();
-        }*/
+        }
         return true;
 
     }
@@ -327,6 +340,7 @@ bool Frontend::StereoInit(){
 
 int Frontend::DetectFeatures(){
     //和左图的那一帧一样，255作为i掩码流值
+
     cv::Mat mask(current_frame_->left_img_.size(),CV_8UC1,255);
     for(auto &feat:current_frame_->features_left_){
         //在特征点附近添加0,的填充
@@ -384,8 +398,7 @@ int Frontend::FindFeaturesInRight(){
             current_frame_->features_right_.push_back(nullptr);
         }
     }
-
-    LOG(INFO)<<"Find" <<num_good_pts<<"in the right image";
+    LOG(INFO)<<"Find " <<num_good_pts<<" in the right image";
     return num_good_pts;
 }
 
@@ -422,9 +435,9 @@ bool Frontend::BuildInitMap(){
     }
     current_frame_->SetKeyFrame();
     map_->InsertKeyFrame(current_frame_);
-    //backend_->UpdateMap();
+    backend_->UpdateMap();
     LOG(INFO) << "Initial map created with " <<cnt_init_landmarks
-              << "map points";
+              << " map points";
     
     return true;
 }

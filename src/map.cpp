@@ -16,7 +16,7 @@ void Map::InsertKeyFrame(Frame::Ptr frame){
         activate_keyframes_[frame->keyframe_id_]=frame;
     }
 
-    if(activate_keyframes_.size()> num_activate_keyframes_){
+    if(static_cast<int>(activate_keyframes_.size())> num_activate_keyframes_){
         //将激活的旧的关键帧删除
         RemoveOldKeyframe();
     }

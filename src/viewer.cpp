@@ -124,6 +124,7 @@ cv::Mat Viewer::PlotFrameImage(){
             cv::circle(img_out,feat->position_.pt,2,cv::Scalar(0,255,0),2);
         }
     }
+    return img_out;
 }
 
 void Viewer::DrawFrame(Frame::Ptr frame,const float* color){

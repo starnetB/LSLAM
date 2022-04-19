@@ -24,7 +24,7 @@ inline bool triangulation(const std::vector<SE3> &poses,
     }
     auto svd=A.bdcSvd(Eigen::ComputeThinU|Eigen::ComputeThinV);
     pt_world=(svd.matrixV().col(3)/svd.matrixV()(3,3)).head<3>();
-
+    return true;
 }
 //converters
 inline Vec2 toVec2(const cv::Point2f p){return Vec2(p.x,p.y);}

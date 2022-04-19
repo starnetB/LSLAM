@@ -4,6 +4,7 @@ namespace lslam{
 bool Config::SetParameterFile(const std::string &filename){
     if(config_==nullptr)
         config_=std::shared_ptr<Config>(new Config);
+    //读取文件，为下面的步骤做准备
     config_->file_=cv::FileStorage(filename.c_str(),cv::FileStorage::READ);
     if(config_->file_.isOpened()==false){
         LOG(ERROR) <<"parameter file" <<filename <<"does not exist,";

@@ -27,6 +27,7 @@ public:
 
     ///get Camera by id 
     Camera::Ptr GetCamera(int camera_id) const {
+        std::cout<<camera_id;
         return cameras_.at(camera_id);
     }
 private:

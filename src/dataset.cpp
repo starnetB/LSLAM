@@ -41,6 +41,7 @@ bool Dataset::Init(){
         // t.norm就是基线
         Camera::Ptr new_camera(new Camera(K(0,0),K(1,1),K(0,2),K(1,2),t.norm(),SE3(SO3(),t)));
         LOG(INFO)<<"Camera "<<i<<"extrinsics:  "<<t.transpose();
+        cameras_.push_back(new_camera);
     }
     fin.close();
     current_image_index_=0;
@@ -52,10 +53,11 @@ Frame::Ptr Dataset::NextFrame(){
     cv::Mat image_left,image_right;
     //read images
     image_left =cv::imread((fmt%dataset_path_ % 0% current_image_index_).str(),cv::IMREAD_GRAYSCALE);
-    image_right=cv::imread((fmt%dataset_path_ % 0% current_image_index_).str(),cv::IMREAD_GRAYSCALE);
+    image_right=cv::imread((fmt%dataset_path_ % 1% current_image_index_).str(),cv::IMREAD_GRAYSCALE);
 
     if(image_left.data==nullptr || image_right.data==nullptr) {
         LOG(WARNING) << "cannot find images at index " << current_image_index_;
+        current_image_index_++;
         return nullptr;
     }
     
