@@ -53,8 +53,12 @@ bool Frontend::Track(){
     int num_track_last=TrackLastFrame();  //使用上一帧图，来更新这一帧图的 features_left Vector,也就是找到对应的特征点
     //获取当前帧的位姿，current_pose->pose_,但是优化有的当前帧位置是左图指向世界坐标系 
     //返回内点的数量，将外点的mappint 为null
-    
+    auto t1=std::chrono::steady_clock::now();
     tracking_inliers_=EstimateCurrentPose();
+    auto t2=std::chrono::steady_clock::now();
+    auto time_used=std::chrono::duration_cast<std::chrono::duration<double>>(t2-t1);
+    LOG(INFO) << "pose estimate CurrentPose cost time:  "<< time_used.count() <<" seconds.";
+   
     
     if(tracking_inliers_>num_features_tracking_){
         //tracking good
@@ -158,6 +162,8 @@ int Frontend::TrackLastFrame(){
         if(kp->map_point_.lock()){
             //use project point
             // 如果有找到对应的地图点，那就使用重投影的方法找到像素点
+            //使用了弱指针，不比担心循环引用的问题，
+            //在本次循环结束后，share_ptr就会被是放，那么引用次数-1
             auto mp=kp->map_point_.lock();
             // * 下面有个地方出现了歧义
             auto px=camera_left_->world2pixel(mp->pos_,current_frame_->Pose());
@@ -422,19 +428,32 @@ bool Frontend::BuildInitMap(){
         //根据左右图的位姿，获取对应的世界坐标系下的pworld，双目相机的世界坐标系下的坐标点
         //curent_frame 通过重投影误差算出来的pose 应该是左图只向直接坐标系
         if(triangulation(poses,points,pworld)&&pworld[2]>0){
+            //创建一次智能指针，计数器加1
             auto new_map_point=MapPoint::CreateNewMappoint();
             new_map_point->SetPos(pworld);
             //增加两个观察点
+            //注意观察点是否有必要记录
             new_map_point->AddObservation(current_frame_->features_left_[i]);
             new_map_point->AddObservation(current_frame_->features_right_[i]);
+            //
             current_frame_->features_left_[i]->map_point_=new_map_point;
             current_frame_->features_right_[i]->map_point_=new_map_point;
             cnt_init_landmarks++;
+            //注意地图中的非激活地图点是否有用呢？
+            //地图点不需要被清零，因为，后面激活的关键帧满了的话，会自动删除feature,并且把map_point的指向给移除掉，最后
+            //最后清理地图，如果一个mappoint没有被检测到有观察点，就会被清楚，所以不比担心激活的mappoint越来越多的问题,但是非激活的mappoint还是会越来越多
+
             map_->InsertMapPoint(new_map_point);
         }
     }
     current_frame_->SetKeyFrame();
+
+    //是否需要去掉非激活是我关键帧？
+    //关键帧也一样，激活的关键帧维持在一定数量
+    //非激活的关键帧会越来越多
     map_->InsertKeyFrame(current_frame_);
+
+    //使用激活的关键帧和激活的关键地图点来进行后端的优化工作
     backend_->UpdateMap();
     LOG(INFO) << "Initial map created with " <<cnt_init_landmarks
               << " map points";

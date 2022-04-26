@@ -69,6 +69,7 @@
         "variant": "cpp",
         "any": "cpp",
         "hash_map": "cpp",
-        "hash_set": "cpp"
+        "hash_set": "cpp",
+        "regex": "cpp"
     }
 }

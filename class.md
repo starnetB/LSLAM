@@ -51,3 +51,8 @@
 ## backend
 * 创建线程，挂起线程，
 * 对Map中的活跃的关键帧和活跃的地图点进行优化
+
+
+## share_ptr会增加引用次数，但在局部内生命周期到期就会自动释放，引用次数就-1
+## weak_ptr不会增加引用次数，因此和share_ptr配合可以防止循环引用，但是不用了最好reset掉，方式指向混乱
+## vector<shared_ptr> .push_back() map 的insert等，插入shared_ptr都会增加引用次数，但是pop和erase的时候引用次数也会-1

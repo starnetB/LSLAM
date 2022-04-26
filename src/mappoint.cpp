@@ -19,6 +19,7 @@ void MapPoint::RemoveObservation(std::shared_ptr<Feature> feat){
         //因为全市智能指针，所以可以用地址判断对象
         if(iter->lock()==feat){
             observations_.erase(iter);
+            //智能指针释放一次，如果所有map已经没有被feat指向的话，那么map_point就会被释放
             feat->map_point_.reset();
             observed_times_--;
             break;

@@ -8,11 +8,12 @@ void Map::InsertKeyFrame(Frame::Ptr frame){
     // usigned long id
     // Frame::Ptr frame
     // if no frame in keyframes_,insert frame
-    if(keyframes_.find(frame->keyframe_id_) == keyframes_.end()){
-        keyframes_.insert(make_pair(frame->keyframe_id_,frame));
+    if(activate_keyframes_.find(frame->keyframe_id_) == activate_keyframes_.end()){
+    //if(keyframes_.find(frame->keyframe_id_) == keyframes_.end()){
+    //    keyframes_.insert(make_pair(frame->keyframe_id_,frame));
         activate_keyframes_.insert(make_pair(frame->keyframe_id_,frame));
     }else{
-        keyframes_[frame->keyframe_id_]=frame;
+        //keyframes_[frame->keyframe_id_]=frame;
         activate_keyframes_[frame->keyframe_id_]=frame;
     }
 
@@ -22,11 +23,13 @@ void Map::InsertKeyFrame(Frame::Ptr frame){
     }
 }
 void Map::InsertMapPoint(MapPoint::Ptr map_point){
-    if(landmarks_.find(map_point->id_)==landmarks_.end()){
-        landmarks_.insert(make_pair(map_point->id_,map_point));
+    if(active_landmarks_.find(map_point->id_)==active_landmarks_.end()){
+    //if(landmarks_.find(map_point->id_)==landmarks_.end()){
+        //非激活点是可以不要的，因为根本没有用到
+        //landmarks_.insert(make_pair(map_point->id_,map_point));
         active_landmarks_.insert(make_pair(map_point->id_,map_point));
     }else{
-        landmarks_[map_point->id_]=map_point;
+        //landmarks_[map_point->id_]=map_point;
         active_landmarks_[map_point->id_]=map_point;
     }
 }
@@ -56,10 +59,12 @@ void Map::RemoveOldKeyframe(){
     Frame::Ptr frame_to_remove=nullptr;
     if(min_dis<min_dis_th){
         //如果存在很近的帧，优先删掉最近的
-        frame_to_remove=keyframes_.at(min_kf_id);
+        //frame_to_remove=keyframes_.at(min_kf_id);
+        frame_to_remove=activate_keyframes_.at(min_kf_id);
     }else{
         //删掉最远的
-        frame_to_remove=keyframes_.at(max_kf_id);
+        //frame_to_remove=keyframes_.at(max_kf_id);
+        frame_to_remove=activate_keyframes_.at(max_kf_id);
     }
 
     LOG(INFO) << "remove keyframe " << frame_to_remove->keyframe_id_;
